@@ -62,6 +62,7 @@ byte lampNIGHT[8] = {
   0b10001
 };
 //------------Koniec Znaki Specjalne-------------
+
 byte address[8] = {0x28, 0x29, 0x86, 0x1E, 0x0, 0x0, 0x80, 0xC8};
 OneWire onewire(ONEWIRE_PIN);
 DS18B20 sensors(&onewire);
@@ -102,8 +103,7 @@ void loop()
 {
   // Odczytujemy i wyswietlamy czas
   dt = clock.getDateTime();
-  //odczytanie stanu przycisku i przypisanie go do zmiennej sensorVal
-  ekran();
+  screen();
   keyboard();
   sensor();
 
@@ -119,16 +119,18 @@ void loop()
   if (dt.hour >= lampOn && dt.hour < lampOff)
   {
     digitalWrite(2, HIGH);
+    statusHalogen = 1;
   }
   if (dt.hour >= lampOff || dt.hour < lampOn)
   {
     digitalWrite(2, LOW);
+    statusHalogen = 0;
   }
 
   delay(1000);
 }
 
-void ekran()
+void screen()
 {
   //---------------Znaki Specjalne----------------
   lcd.createChar(0, moon);
@@ -137,6 +139,7 @@ void ekran()
   lcd.createChar(3, lampON);
   lcd.createChar(4, lampNIGHT);
   //------------Koniec Znaki Specjalne------------
+  
   lcd.backlight(); // zalaczenie podwietlenia 
   lcd.setCursor(0,0); // Ustawienie kursora w pozycji 0,0 (pierwszy wiersz, pierwsza kolumna)
   lcd.print(dt.day);    lcd.print("-");
@@ -181,7 +184,7 @@ void keyboard()
     {
       statusHalogen = 1;
     }
-    Serial.print("halogen");
+    //Serial.print("halogen");
   } else if ( buttonKeyboardValue > 475 && buttonKeyboardValue < 520 )
   {
     //led
@@ -192,7 +195,7 @@ void keyboard()
     {
       statusLed = 1;
     }
-    Serial.print("led");
+    //Serial.print("led");
   } else if ( buttonKeyboardValue > 315 && buttonKeyboardValue < 350 )
   {
     //kabel
@@ -203,7 +206,7 @@ void keyboard()
     {
       //statusLed = 1;
     }
-    Serial.print("kabel");
+    //Serial.print("kabel");
   } else if ( buttonKeyboardValue > 246 && buttonKeyboardValue < 266 )
   {
     //fan
@@ -214,7 +217,7 @@ void keyboard()
     {
       //statusLed = 1;
     }
-    Serial.print("fan");
+    //Serial.print("fan");
   }
 }
 
@@ -254,35 +257,3 @@ void sensor()
  
 }
 
-/*void wyswietl(byte i)
-  {
-  lcd.print(":");
-  if(i < 10)
-  lcd.print('0');
-  lcd.print(i,DEC);
-  }
-
-  void zegar()
-  {
-  lcd.clear();          // czyszczenie LCD
-  lcd.begin(16,2);       // parametry wyświetlacza
-  lcd.setCursor(3,0);          // ustawienie kursora na wyświetlaczu LCD
-
-  if(dt.day <10)
-  lcd.print('1');
-  lcd.print(dt.day,DEC);
-  lcd.print("/");
-
-  if(dt.month <10)
-  lcd.print('0');
-  lcd.print(dt.month,DEC);
-  lcd.print("/");
-  lcd.print(dt.year,DEC);
-
-  if(dt.hour <10)
-  lcd.setCursor(5,1);   // ustawienie kursora na wyświetlaczu LCD
-  lcd.setCursor(4,1);   // ustawienie kursora na wyświetlaczu LCD
-  lcd.print(dt.hour,DEC);
-  wyswietl(dt.minute);   // wywołanie funkcji wyświetl
-  wyswietl(dt.second);   // wywołanie funkcji wyświetl
-  }*/
