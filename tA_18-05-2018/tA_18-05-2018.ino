@@ -5,12 +5,50 @@
 #include <Wire.h>
 #include <DS3231.h>
 
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Ustawienie adresu ukladu na 0x27
-
+//---------------Czujnik lewy dolny----------------
 #define DHT_DL_PIN 4 //czujnik DL
 #define DHT_DL_TYPE DHT22
+DHT dhtDL(DHT_DL_PIN, DHT_DL_TYPE);
+//-------------------------------------------------
+
+//---------------Czujnik prawy gora----------------
+#define DHT_GP_PIN 7 //czujnik DL
+#define DHT_GP_TYPE DHT11
+DHT dhtGP(DHT_GP_PIN, DHT_GP_TYPE);
+//-------------------------------------------------
+
+//---------------Czujnik prawy dol-----------------
+#define DHT_DP_PIN 8 //czujnik DL
+#define DHT_DP_TYPE DHT11
+DHT dhtDP(DHT_DP_PIN, DHT_DP_TYPE);
+//-------------------------------------------------
+
+//---------------Czujnik wyspa---------------------
 #define ONEWIRE_PIN 5
+byte address[8] = {0x28, 0x29, 0x86, 0x1E, 0x0, 0x0, 0x80, 0xC8};
+OneWire onewire(ONEWIRE_PIN);
+DS18B20 sensors(&onewire);
+//-------------------------------------------------
+
+//---------------ekran I2C-------------------------
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Ustawienie adresu ukladu na 0x27
+//-------------------------------------------------
+
+DS3231 clock;
+RTCDateTime dt;
+
+
 //---------------Znaki Specjalne----------------
+byte degreesC[8] = {
+  0b01000,
+  0b10100,
+  0b01000,
+  0b00110,
+  0b01001,
+  0b01000,
+  0b01001,
+  0b00110
+};
 byte moon[8] = {
   0b00110,
   0b01111,
@@ -63,18 +101,13 @@ byte lampNIGHT[8] = {
 };
 //------------Koniec Znaki Specjalne-------------
 
-byte address[8] = {0x28, 0x29, 0x86, 0x1E, 0x0, 0x0, 0x80, 0xC8};
-OneWire onewire(ONEWIRE_PIN);
-DS18B20 sensors(&onewire);
-DHT dht(DHT_DL_PIN, DHT_DL_TYPE);
-DS3231 clock;
-RTCDateTime dt;
 int lampOn = 7;
 int lampOff = 16;
 int statusLed = 0;
 int statusHalogen = 0;
 int statusFan = 0;
 int statusCable = 0;
+int statusSensorScreen = 0;
 int buttonKeyboardValue;
 int i = 0;
 
@@ -91,7 +124,9 @@ void setup()
   pinMode(3, OUTPUT); //led
   // inicjalizacja czujnika
   // Inicjalizacja DS3231
-  dht.begin();
+  dhtDL.begin();
+  dhtGP.begin();
+  dhtDP.begin();
   Serial.println("Initialize DS3231");
   clock.begin();
 
@@ -103,9 +138,10 @@ void loop()
 {
   // Odczytujemy i wyswietlamy czas
   dt = clock.getDateTime();
-  screen();
   keyboard();
-  sensor();
+  screen();
+  
+  //sensor();
 
   if (statusLed == 1)
   {
@@ -138,35 +174,29 @@ void screen()
   lcd.createChar(2, lampOFF);
   lcd.createChar(3, lampON);
   lcd.createChar(4, lampNIGHT);
+  lcd.createChar(5, degreesC);
   //------------Koniec Znaki Specjalne------------
   
   lcd.backlight(); // zalaczenie podwietlenia 
   lcd.setCursor(0,0); // Ustawienie kursora w pozycji 0,0 (pierwszy wiersz, pierwsza kolumna)
-  lcd.print(dt.day);    lcd.print("-");
-  lcd.print(dt.month);
-  lcd.print(" ");  lcd.print(dt.hour);   
-  lcd.print(":");  lcd.print(dt.minute); 
-  lcd.print(":");  lcd.print(dt.second);
-  lcd.setCursor(0,1); //Ustawienie kursora w pozycji 0,0 (drugi wiersz, pierwsza kolumna)
-
-  if (dt.hour >= lampOn && dt.hour < lampOff)
+  if (dt.hour >= lampOn && dt.hour < lampOff) // znaczek slonce - ksiezyc
   {
     lcd.print((char)1);
-  }
-  if (dt.hour >= lampOff || dt.hour < lampOn)
-  {
+  } else {
     lcd.print((char)0);
   }
-  lcd.print(" ");
+  lcd.print(clock.dateFormat("d-m H:i:s",dt));
+  
+  lcd.setCursor(0,1); //Ustawienie kursora w pozycji 0,0 (drugi wiersz, pierwsza kolumna)
   if (statusHalogen==1)
   {lcd.print("H:"); lcd.print((char)3);}
   else
   {{lcd.print("H:"); lcd.print((char)2);}}
-  lcd.print(" ");
   if (statusLed==1)
   {lcd.print("L:"); lcd.print((char)3);}
   else
   {{lcd.print("L:"); lcd.print((char)2);}}
+  screenSwitcher(statusSensorScreen);
   
 }
 
@@ -174,7 +204,7 @@ void keyboard()
 {
   buttonKeyboardValue = analogRead(0);
   Serial.print(buttonKeyboardValue);
-  if ( buttonKeyboardValue > 955 && buttonKeyboardValue < 1010 )
+  if ( buttonKeyboardValue > 955 && buttonKeyboardValue < 1030 )
   {
     //halogen
     if (statusHalogen == 1)
@@ -185,7 +215,7 @@ void keyboard()
       statusHalogen = 1;
     }
     //Serial.print("halogen");
-  } else if ( buttonKeyboardValue > 475 && buttonKeyboardValue < 520 )
+  } else if ( buttonKeyboardValue > 475 && buttonKeyboardValue < 530 )
   {
     //led
     if (statusLed == 1)
@@ -196,32 +226,85 @@ void keyboard()
       statusLed = 1;
     }
     //Serial.print("led");
-  } else if ( buttonKeyboardValue > 315 && buttonKeyboardValue < 350 )
+  } else if ( buttonKeyboardValue > 315 && buttonKeyboardValue < 370 )
   {
-    //kabel
-    if (statusLed == 1)
-    {
-      //statusLed = 0;
-    } else
-    {
-      //statusLed = 1;
-    }
-    //Serial.print("kabel");
-  } else if ( buttonKeyboardValue > 246 && buttonKeyboardValue < 266 )
+   if(statusSensorScreen == 3)
+   {
+    statusSensorScreen = 0;
+   }else{
+    statusSensorScreen++;
+   }
+  } else if ( buttonKeyboardValue > 246 && buttonKeyboardValue < 275 )
   {
-    //fan
-    if (statusLed == 1)
-    {
-      // statusLed = 0;
-    } else
-    {
-      //statusLed = 1;
-    }
-    //Serial.print("fan");
+    
   }
 }
 
-void sensor()
+void showSensor(DHT sensor)
+{
+  float t = sensor.readTemperature();
+  float h = sensor.readHumidity();
+ 
+  // Sprawdzamy czy są odczytane wartości
+  if (isnan(t) || isnan(h))
+  {
+    // Jeśli nie, wyświetlamy informację o błędzie
+    lcd.print("ERR");
+    Serial.println("ERR");
+  } else
+  {
+    // Jeśli tak, wyświetlamy wyniki pomiaru
+    lcd.print(t);
+    lcd.print((char)5);
+    lcd.print(",");
+    lcd.print(h);
+    lcd.print("%");
+    
+    Serial.print("T:");
+    Serial.print(t);
+    Serial.print("*C");
+    Serial.print("H:");
+    Serial.print(h);
+    Serial.println("5%");
+  }
+}
+
+void screenSwitcher(int stat)
+{
+  switch (stat) {
+  case 0:
+    lcd.print("DL:");
+    showSensor(dhtDL);
+    Serial.print("0");
+    break;
+  case 1:
+    lcd.print("GP:");
+    showSensor(dhtGP);
+    Serial.print("1");
+    break;
+  case 2:
+    lcd.print("DP:");
+    showSensor(dhtDP);
+    Serial.print("2");
+    break;
+  case 3:
+    lcd.print("IH:");
+    if (sensors.available())
+  {
+    float temperature = sensors.readTemperature(address);
+
+    Serial.print("wyspa ciepla: ");
+    Serial.print(temperature);
+
+    sensors.request(address);
+  }
+    Serial.print("3");
+    break;
+}
+}
+
+
+/*void sensor()
 {
 
 
@@ -236,8 +319,8 @@ void sensor()
     sensors.request(address);
   }
   // Odczyt temperatury i wilgotności powietrza
-  float t = dht.readTemperature();
-  float h = dht.readHumidity();
+  float t = dhtDL.readTemperature();
+  float h = dhtDL.readHumidity();
  
   // Sprawdzamy czy są odczytane wartości
   if (isnan(t) || isnan(h))
@@ -255,5 +338,5 @@ void sensor()
     Serial.println(" *C");
   }
  
-}
+}*/
 
