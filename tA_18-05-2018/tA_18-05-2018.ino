@@ -176,7 +176,6 @@ void screen()
   lcd.createChar(4, lampNIGHT);
   lcd.createChar(5, degreesC);
   //------------Koniec Znaki Specjalne------------
-  
   lcd.backlight(); // zalaczenie podwietlenia 
   lcd.setCursor(0,0); // Ustawienie kursora w pozycji 0,0 (pierwszy wiersz, pierwsza kolumna)
   if (dt.hour >= lampOn && dt.hour < lampOff) // znaczek slonce - ksiezyc
@@ -242,8 +241,8 @@ void keyboard()
 
 void showSensor(DHT sensor)
 {
-  float t = sensor.readTemperature();
-  float h = sensor.readHumidity();
+  int t = sensor.readTemperature();
+  int h = sensor.readHumidity();
  
   // Sprawdzamy czy są odczytane wartości
   if (isnan(t) || isnan(h))
@@ -291,9 +290,10 @@ void screenSwitcher(int stat)
     lcd.print("IH:");
     if (sensors.available())
   {
-    float temperature = sensors.readTemperature(address);
+    int temperature = sensors.readTemperature(address);
 
-    Serial.print("wyspa ciepla: ");
+    lcd.print(temperature);
+    Serial.println("wyspa ciepla: ");
     Serial.print(temperature);
 
     sensors.request(address);
