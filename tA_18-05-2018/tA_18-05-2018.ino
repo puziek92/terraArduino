@@ -118,16 +118,17 @@ void setup()
   lcd.begin(16,2);   // Inicjalizacja LCD 2x16
   sensors.begin(9);
   sensors.request(address);
-  // stany wyjściowe oświetlenia
+  //------------FAN PWM--------------
+  pinMode(11, OUTPUT);
+  //----------END FAN PWM------------
   //przekaźnik sterowany stanem niskim
   pinMode(2, OUTPUT); //halogen
   pinMode(3, OUTPUT); //led
   // inicjalizacja czujnika
-  // Inicjalizacja DS3231
   dhtDL.begin();
   dhtGP.begin();
   dhtDP.begin();
-  Serial.println("Initialize DS3231");
+  // Inicjalizacja DS3231
   clock.begin();
 
   // Ustawiany date i godzine kompilacji szkicu
@@ -138,10 +139,6 @@ void loop()
 {
   // Odczytujemy i wyswietlamy czas
   dt = clock.getDateTime();
-  keyboard();
-  screen();
-  
-  //sensor();
 
   if (statusLed == 1)
   {
@@ -163,7 +160,36 @@ void loop()
     statusHalogen = 0;
   }
 
+  if (statusFan == 1)
+  {
+    analogWrite(11, 255);
+  } else
+  {
+    analogWrite(11, 0);
+  }
+  statusInfo();
+  keyboard();
+  screen();
+  
+  //sensor();
+
   delay(1000);
+}
+
+void statusInfo()
+{
+  Serial.print("wartosc przycisku: "); Serial.println(buttonKeyboardValue);
+   if (sensors.available())
+  {
+    int temperature = sensors.readTemperature(address);
+    Serial.println("IH: ");
+    Serial.print(temperature);
+    sensors.request(address);
+  }
+  Serial.println("DL: "); showSensorStatus(dhtDL);
+  Serial.println("GP: "); showSensorStatus(dhtGP);
+  Serial.println("DP: "); showSensorStatus(dhtDP);
+  Serial.println("");
 }
 
 void screen()
@@ -202,7 +228,6 @@ void screen()
 void keyboard()
 {
   buttonKeyboardValue = analogRead(0);
-  Serial.print(buttonKeyboardValue);
   if ( buttonKeyboardValue > 955 && buttonKeyboardValue < 1030 )
   {
     //halogen
@@ -235,7 +260,13 @@ void keyboard()
    }
   } else if ( buttonKeyboardValue > 246 && buttonKeyboardValue < 275 )
   {
-    
+    if (statusFan == 1)
+    {
+      statusFan = 0;
+    } else
+    {
+      statusFan = 1;
+    }
   }
 }
 
@@ -249,7 +280,6 @@ void showSensor(DHT sensor)
   {
     // Jeśli nie, wyświetlamy informację o błędzie
     lcd.print("ERR");
-    Serial.println("ERR");
   } else
   {
     // Jeśli tak, wyświetlamy wyniki pomiaru
@@ -258,7 +288,22 @@ void showSensor(DHT sensor)
     lcd.print(",");
     lcd.print(h);
     lcd.print("%");
-    
+  }
+}
+
+void showSensorStatus(DHT sensor)
+{
+  int t = sensor.readTemperature();
+  int h = sensor.readHumidity();
+ 
+  // Sprawdzamy czy są odczytane wartości
+  if (isnan(t) || isnan(h))
+  {
+    // Jeśli nie, wyświetlamy informację o błędzie
+    Serial.println("ERR");
+  } else
+  {
+    // Jeśli tak, wyświetlamy wyniki pomiaru    
     Serial.print("T:");
     Serial.print(t);
     Serial.print("*C");
@@ -274,17 +319,14 @@ void screenSwitcher(int stat)
   case 0:
     lcd.print("DL:");
     showSensor(dhtDL);
-    Serial.print("0");
     break;
   case 1:
     lcd.print("GP:");
     showSensor(dhtGP);
-    Serial.print("1");
     break;
   case 2:
     lcd.print("DP:");
     showSensor(dhtDP);
-    Serial.print("2");
     break;
   case 3:
     lcd.print("IH:");
@@ -298,45 +340,7 @@ void screenSwitcher(int stat)
 
     sensors.request(address);
   }
-    Serial.print("3");
     break;
 }
 }
-
-
-/*void sensor()
-{
-
-
- if (sensors.available())
-  {
-    float temperature = sensors.readTemperature(address);
-
-    Serial.print("wyspa ciepla: ");
-    Serial.print(temperature);
-    Serial.println(F(" 'C"));
-
-    sensors.request(address);
-  }
-  // Odczyt temperatury i wilgotności powietrza
-  float t = dhtDL.readTemperature();
-  float h = dhtDL.readHumidity();
- 
-  // Sprawdzamy czy są odczytane wartości
-  if (isnan(t) || isnan(h))
-  {
-    // Jeśli nie, wyświetlamy informację o błędzie
-    Serial.println("Blad odczytu danych z czujnika");
-  } else
-  {
-    // Jeśli tak, wyświetlamy wyniki pomiaru
-    Serial.print("Wilgotnosc: ");
-    Serial.print(h);
-    Serial.print(" % ");
-    Serial.print("Temperatura: ");
-    Serial.print(t);
-    Serial.println(" *C");
-  }
- 
-}*/
 
