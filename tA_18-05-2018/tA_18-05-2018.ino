@@ -167,16 +167,14 @@ void loop()
   {
     analogWrite(11, 0);
   }
-  statusInfo();
+  //statusInfo();
   keyboard();
   screen();
-  
-  //sensor();
 
   delay(1000);
 }
 
-void statusInfo()
+/*void statusInfo()
 {
   Serial.print("wartosc przycisku: "); Serial.println(buttonKeyboardValue);
    if (sensors.available())
@@ -190,7 +188,7 @@ void statusInfo()
   Serial.println("GP: "); showSensorStatus(dhtGP);
   Serial.println("DP: "); showSensorStatus(dhtDP);
   Serial.println("");
-}
+}*/
 
 void screen()
 {
@@ -291,7 +289,7 @@ void showSensor(DHT sensor)
   }
 }
 
-void showSensorStatus(DHT sensor)
+/*void showSensorStatus(DHT sensor)
 {
   int t = sensor.readTemperature();
   int h = sensor.readHumidity();
@@ -311,7 +309,16 @@ void showSensorStatus(DHT sensor)
     Serial.print(h);
     Serial.println("5%");
   }
-}
+
+    if (sensors.available())
+  {
+    int temperature = sensors.readTemperature(address);
+
+        Serial.println("wyspa ciepla: ");
+    Serial.print(temperature);
+    sensors.request(address);
+  }
+}*/
 
 void screenSwitcher(int stat)
 {
@@ -335,9 +342,7 @@ void screenSwitcher(int stat)
     int temperature = sensors.readTemperature(address);
 
     lcd.print(temperature);
-    Serial.println("wyspa ciepla: ");
-    Serial.print(temperature);
-
+    lcd.print("      ");
     sensors.request(address);
   }
     break;
